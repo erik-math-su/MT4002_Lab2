@@ -1,0 +1,32 @@
+```{r}
+en_spelomgang <- function(p, kapital) {
+  if (runif(1) < p) { # om vi vunnit
+    return(kapital + 1)
+  } else { # annars har vi förlorat
+    return(kapital - 1)
+  }
+}
+
+kim_spelar <- function(){
+ p <- 1/2
+ kapital <- 1
+ repeat {
+   kapital <- en_spelomgang(p, kapital)
+   if (kapital == 6)
+     return(1)
+   if (kapital == 0)
+     return(0)
+   else
+     next
+ }
+}
+
+sim_kim <- function(){
+  
+}
+```
+
+```{r}
+test <- kim_spelar()
+```
+
