@@ -7,9 +7,7 @@ en_spelomgang <- function(p, kapital) {
   }
 }
 
-kim_spelar <- function(){
- p <- 1/2
- kapital <- 1
+kim_spelar <- function(p, kapital){
  repeat {
    kapital <- en_spelomgang(p, kapital)
    if (kapital == 6)
@@ -21,12 +19,211 @@ kim_spelar <- function(){
  }
 }
 
-sim_kim <- function(){
-  
+set.seed(950122)
+sim_kim <- function(p, n, kapital){
+  i <- 0
+  antal_vinster <- 0
+  while (i < n){
+    i <- i + 1
+    if (kim_spelar(p, kapital) == 1)
+      antal_vinster <- antal_vinster + 1
+  }
+  return(antal_vinster)
 }
 ```
 
 ```{r}
-test <- kim_spelar()
+vinster <- sim_kim(0.5, 1000, 1)
+```
+```{r}
+n <- 1000
+p <- 0.5
+kapital1 <- 2
+kapital2 <- 3
+kapital3 <- 4
+kapital4 <- 5
+
+vinster1 <- sim_kim(p, n, kapital1)
+vinster2 <- sim_kim(p, n, kapital2)
+vinster3 <- sim_kim(p, n, kapital3)
+vinster4 <- sim_kim(p, n, kapital4)
+```
+```{r}
+start_varden <- c(1, 2, 3, 4, 5)
+resultat <- sapply(start_varden, function(k) sim_kim(0.5, 1000, k))
+
+# Skapa en snygg dataframe
+tabell <- data.frame(
+  Startkapital = start_varden,
+  Vinster = resultat,
+  Andel = resultat / 1000
+)
+print(tabell)
+```
+```{r}
+# Ladda bibliotek för snyggare grafik
+if (!require(ggplot2)) install.packages("ggplot2")
+library(ggplot2)
+
+# Inställningar
+n <- 1000
+p <- 0.5
+start_kapital_vektor <- 1:5  # Skapar en lista c(1, 2, 3, 4, 5)
+
+# Kör simuleringen för varje startkapital
+vinster_vektor <- sapply(start_kapital_vektor, function(k) sim_kim(p, n, k))
+
+# Skapa en dataframe för plotting
+plot_data <- data.frame(
+  Startkapital = start_kapital_vektor,
+  Andel_Vinster = vinster_vektor / n
+)
+
+# Skapa plotten
+ggplot(plot_data, aes(x = Startkapital, y = Andel_Vinster)) +
+  geom_point(size = 4, color = "#2c3e50") +        # Punkter för simuleringen
+  geom_smooth(method = "lm", se = FALSE, color = "#e74c3c", linetype = "dashed") + # Den linjära trenden
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(title = "Gambler's Ruin: Sannolikhet att nå 6 kr",
+       subtitle = paste("Baserat på", n, "simuleringar per startkapital (p = 0.5)"),
+       x = "Startkapital (kr)",
+       y = "Andel vinster (%)") +
+  theme_minimal()
+```
+
+```{r}
+kims_matris <- function(p) {
+  q <- 1 - p
+  matrix(c(
+    0,   p,   0,   0,   0,   0,   q,   # Rad 1 (Start 1kr): Gå till 2kr (p) eller 0kr (q)
+    q,   0,   p,   0,   0,   0,   0,   # Rad 2 (Start 2kr): Gå till 3kr (p) eller 1kr (q)
+    0,   q,   0,   p,   0,   0,   0,   # Rad 3 (Start 3kr): Gå till 4kr (p) eller 2kr (q)
+    0,   0,   q,   0,   p,   0,   0,   # Rad 4 (Start 4kr): Gå till 5kr (p) eller 3kr (q)
+    0,   0,   0,   q,   0,   p,   0,   # Rad 5 (Start 5kr): Gå till 6kr (p) eller 4kr (q)
+    0,   0,   0,   0,   0,   1,   0,   # Rad 6 (Mål 6kr): Stanna på 6kr (Absorberande)
+    0,   0,   0,   0,   0,   0,   1    # Rad 7 (Mål 0kr): Stanna på 0kr (Absorberande)
+  ), nrow = 7, byrow = TRUE)
+}
+```
+
+
+```{r}
+berakna_SR <- function(P) {
+  # 1. Identifiera dimensioner
+  # Eftersom vi har 5 transienta tillstånd (1-5 kr) extraherar vi dessa rader/kolumner
+  n_transient <- 5 
+  
+  # 2. Extrahera Q (5x5 matrisen för interna övergångar)
+  Q <- P[1:n_transient, 1:n_transient]
+  
+  # 3. Extrahera R (5x2 matrisen för vägen till absorption)
+  # Kolumn 6 och 7 i din P-matris
+  R <- P[1:n_transient, 6:7]
+  
+  # 4. Skapa en identitetsmatris (I) med samma storlek som Q
+  I <- diag(n_transient)
+  
+  # 5. Beräkna fundamentalmatrisen S = (I - Q)^-1
+  # solve() används i R för att invertera matriser
+  S <- solve(I - Q)
+  
+  # 6. Beräkna SR
+  SR <- S %*% R
+  
+  # Snygga till namnen så det är lättläst
+  rownames(SR) <- paste0("Start:", 1:5, "kr")
+  colnames(SR) <- c("Vinst (6kr)", "Förlust (0kr)")
+  
+  return(SR)
+}
+
+# Användning:
+P_matris <- kims_matris(0.5)
+resultat_SR <- berakna_SR(P_matris)
+print(resultat_SR)
+```
+```{r}
+# 1. Definiera de p-värden som ska undersökas enligt uppgiften
+p_varden <- c(0.20, 0.35, 0.50, 0.65, 0.80)
+n_forsok <- 1000  # Antal simuleringar per p-värde
+start_pengar <- 1
+
+# 2. Skapa en dataframe för att lagra och jämföra resultaten
+resultat_tabell <- data.frame(
+  p_vinstchans = p_varden,
+  Simulering = numeric(5),
+  Matrismetod = numeric(5)
+)
+
+# 3. Genomför beräkningarna
+for (i in 1:length(p_varden)) {
+  p_nu <- p_varden[i]
+  
+  # --- Metod 1: Simulering ---
+  # Vi använder din sim_kim-funktion och räknar ut andelen vinster
+  vinst_antal <- sim_kim(p_nu, n_forsok, start_pengar)
+  resultat_tabell$Simulering[i] <- vinst_antal / n_forsok
+  
+  # --- Metod 2: Matrismetod (SR) ---
+  # Vi skapar matrisen P och beräknar SR-blocket
+  P <- kims_matris(p_nu)
+  SR <- berakna_SR(P)
+  
+  # Elementet på rad 1, kolumn 1 motsvarar vinstchans från 1 kr till 6 kr
+  resultat_tabell$Matrismetod[i] <- SR[1, 1]
+}
+
+# 4. Presentera resultatet
+print(resultat_tabell)
+```
+```{r}
+robins_matris <- function(p) {
+  q <- 1 - p
+  P <- matrix(0, nrow = 7, ncol = 7)
+  
+  # Raderna 1-5: Transienta tillstånd (1, 2, 3, 4, 5 kr)
+  # ---------------------------------------------------
+  P[1, 2] <- p; P[1, 7] <- q  # 1kr: Dubblar till 2 eller förlorar allt
+  P[2, 4] <- p; P[2, 7] <- q  # 2kr: Dubblar till 4 eller förlorar allt
+  P[3, 6] <- p; P[3, 7] <- q  # 3kr: Dubblar till 6 (mål) eller förlorar allt
+  P[4, 6] <- p; P[4, 2] <- q  # 4kr: Satsar 2. Vinner till 6, förlorar ner till 2
+  P[5, 6] <- p; P[5, 4] <- q  # 5kr: Satsar 1. Vinner till 6, förlorar ner till 4
+  
+  # Raderna 6-7: Absorberande tillstånd (6 kr och 0 kr)
+  # ---------------------------------------------------
+  P[6, 6] <- 1  # Stanna på 6 (vinst)
+  P[7, 7] <- 1  # Stanna på 0 (förlust)
+  
+  return(P)
+}
+
+```
+
+```{r}
+# p-värden att undersöka
+p_varden <- c(0.20, 0.35, 0.50, 0.65, 0.80)
+
+# Skapa tabell för att jämföra vinstchans från 1 kr till 6 kr
+jamforelse_strategi <- data.frame(
+  p = p_varden,
+  Kims_Vinstchans = numeric(5),
+  Robins_Vinstchans = numeric(5)
+)
+
+for (i in 1:length(p_varden)) {
+  p_nu <- p_varden[i]
+  
+  # Beräkna Kims vinstchans (försiktig strategi)
+  SR_kim <- berakna_SR(kims_matris(p_nu))
+  jamforelse_strategi$Kims_Vinstchans[i] <- SR_kim[1, 1]
+  
+  # Beräkna Robins vinstchans (djärv strategi)
+  SR_robin <- berakna_SR(robins_matris(p_nu))
+  jamforelse_strategi$Robins_Vinstchans[i] <- SR_robin[1, 1]
+}
+
+# Visa tabellen
+print(jamforelse_strategi)
 ```
 
