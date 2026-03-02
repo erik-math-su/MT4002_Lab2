@@ -100,7 +100,6 @@ kims_matris <- function(p) {
 
 ```{r}
 berakna_SR <- function(P, n_transient) {
-  n_transient <- 5 
   Q <- P[1:n_transient, 1:n_transient]
   R <- P[1:n_transient, 6:7]
   I <- diag(n_transient)
@@ -145,13 +144,13 @@ print(resultat_tabell)
 robins_matris <- function(p) {
   q <- 1 - p
   matrix(c(
-      0,   p,   0,   0,   0,   0,   q,   # Rad 1 (Start 1kr): Går till 2 eller 0
-      0,   0,   0,   p,   0,   0,   q,   # Rad 2 (Start 2kr): Går till 4 eller 0
-      0,   0,   0,   0,   0,   p,   q,   # Rad 3 (Start 3kr): Går till 6 eller 0
-      0,   q,   0,   0,   0,   p,   0,   # Rad 4 (Start 4kr): Går till 6 eller 2
-      0,   0,   0,   q,   0,   p,   0,   # Rad 5 (Start 5kr): Går till 6 eller 4
-      0,   0,   0,   0,   0,   1,   0,   # Rad 6 (Mål 6kr): Absorberande vinst
-      0,   0,   0,   0,   0,   0,   1    # Rad 7 (Mål 0kr): Absorberande förlust
+      0,   p,   0,   0,   0,   0,   q,
+      0,   0,   0,   p,   0,   0,   q,
+      0,   0,   0,   0,   0,   p,   q,
+      0,   q,   0,   0,   0,   p,   0,
+      0,   0,   0,   q,   0,   p,   0,
+      0,   0,   0,   0,   0,   1,   0,
+      0,   0,   0,   0,   0,   0,   1
   ), nrow = 7, byrow = TRUE)
 }
 
